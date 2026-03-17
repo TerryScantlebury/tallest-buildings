@@ -1,0 +1,444 @@
+---
+title: "R Tutorial - World's Tallest BUildings"
+author: "Terry Scantlebury"
+date: "3/17/2026"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#3 R Tutorial World's Tallest BUildings
+
+While in R-Studio editor window, you can always collapse, delete, or regenerate the results frame, that appears below each chunk of R code, as often as you like. So if your screen becomes cluttered, you now know what to do.
+
+## Let's look at some tall buildings by downloading the csv file, and exloring some of its characteristics.
+
+``` {r }
+url = "https://raw.githubusercontent.com/TerryScantlebury/tallest-buildings/refs/heads/main/TallestBuildings.csv"
+buildings <- read.csv(url)
+```
+
+The class of the variable we created, using the class() function
+
+``` {r }
+class(buildings)
+```
+
+The structure of the data-frame, using the str() function.
+
+
+``` {r }
+str(buildings)
+```
+
+There are 64 observations (also called rows) and 9 variables (also called columns or features). So buildings[1:64,1:9] represents the full set of data. We will use the View() function to open the buildings data-frame in a separate tab. You could also open a view tab by clicking on the name of the object in the Global Environment pane (upper right side of R Studio).
+
+
+``` {r }
+View(buildings)
+```
+
+## Steps in my version of the cleaning process. 
+
+First this is not the only way to do it. As you demonstrated in the excel exercise, many different approaches or steps can be performed. 
+
+### The last column in junk data and should be deleted. It only has one value, the rest are nulls. 
+
+This tutorial uses base R sub-setting notation e.g. [1:64,1:9].  
+
+In a later tutorial you will learn a more natural language way of selecting and filtering data.
+
+From a technical perspective, we are interested in a specific subset of the data and there are basically 2 ways to think of this subset. It should be obvious that, for now, we want to keep all the rows so, in addition to the rows, 
+
+* We keep the columns we want OR 
+* We delete the column(s) we don't want 
+
+To keep the columns we want we would specify the subset like this [,1:8]. By leaving the row-part blank R will use all rows, and 1:8 will be the first 8 columns 
+
+OR 
+
+To delete the column(s) we don't want we would specify the subset like this [,-9]. By leaving the row-part blank R will use all rows, and -9 will drop column 9 
+
+So, the following statements produce the same result. Run the chunk and check the comparison.
+
+``` {r }
+keepsome <- buildings[,1:8]
+dropsome <- buildings[,-9]
+identical(keepsome,dropsome)
+```
+
+And below, we update the actual data-frame. The change is reflected in the Global Environment.
+ so, [1:64,1:9] will become [1:64,1:8]
+
+``` {r }
+buildings <- buildings[,1:8]
+str(buildings)
+```
+
+### The names of the columns need to be fixed up.
+
+You access the names of an object with the names() function. 
+
+``` {r }
+names(buildings)
+```
+
+And by making an assignment to names() you can change the names of an object with new names in a character vector. 
+
+``` {r }
+names(buildings) <- c("Rank","Building","city","Country","Height.Metres","Height.Feet","Floors","Built")
+str(buildings)
+```
+
+The names() function returns a character vector, which we can confirm with the class() function and we can also check how long the vector is with the length() function. 
+
+``` {r }
+class(names(buildings))
+length(names(buildings))
+```
+
+Finally, you can display or assign a value to an individual element in the names vector. Let's look at the 3rd element only. ```
+```{r}
+names(buildings)[3]
+```
+
+And change to upper case
+``` {r }
+names(buildings)[3] <- "City"
+names(buildings)[3]
+```
+
+### Fixing the missing ranks. 
+
+Looking at the Rank column (I'll show a few ways to look), we see some NA values because of the (un)merged data that came from Excel originally. Managing missing data is an important data cleaning step that we will also explore later.
+
+Using sports ranking method (1,1,3,4,...), we will fill-down and impute the missing values. First, a couple of equivalent ways to look at the Rank column.
+
+Components of data-frames can be accessed like a list or like a matrix. We can use either [, [[ or $ operator to access columns of a data-frame. 
+
+``` {r }
+buildings$Rank
+```
+
+
+``` {r }
+buildings["Rank"]
+```
+
+
+
+``` {r }
+buildings[,1]
+```
+
+Also, A data frame is a specialized list where each element is a vector (column) of equal length, creating a two-dimensional, tabular structure. Let's look at the second list
+```{r}
+buildings[[2]]
+```
+
+#### R packages 
+
+Now is a good time to talk about packages. 
+
+One of the beautiful things about the R open source ecosystem, is that there are droves of developers who are constantly creating new functionality for R. These new capabilities are stored in packages. When you want new functionality you just install a package and it becomes available. R is constantly evolving.  And as new discoveries, inventions and developments are made in the worlds of big data, data science, statistics, economic modeling, machine learning, artificial intelligence, geographic information systems, computer vision, computer graphics (the list is endless really), developers  quickly create new packages to extend the capabilities of R.
+
+* I want to take advantage of a function called nafill() from the data.table package  
+* n.b. this not the only function that can do the task! 
+* We will not explore data.tables further, so for now just this function will do.
+
+To use a package it must be **installed once** with the install.packages() function. 
+
+And to use a package it must be **loaded every time** you restart R with the library() function. 
+
+Here is a technique that  
+
+* checks if the package is on the computer i.e. required()
+* and installs a missing package, only once, i.e if required() fails, 
+* and then always loads the library of functions in the package. 
+
+``` {r }
+if(!require(data.table)) install.packages("data.table")
+library(data.table)
+```
+
+Basically, the install.packages() function should only ever run once - when the require() function fails the first time. The library() function runs each time the code is executed and loads all of the functionality from the package into the R environment. 
+
+#### on your own - use ?nafill() to look up the documentation on the function for an explanation of the parameters. 
+
+#### Let's fix the rank problem using a 'look forward' or 'fill down' strategy.
+``` {r }
+# look at the ranks before the fill
+print("Before fill down")
+buildings$Rank
+cat('\n')
+# fill down missing NA value
+print("After fill down")
+buildings$Rank <- nafill(buildings$Rank, "locf")
+# look at the ranks again after the fill
+buildings$Rank
+```
+
+### Search and replace
+
+#### As done in Excel
+
+You may have used Excel's search-and-replace function, found on the ribbon bar, with a  wildcard selection, to remove the superscript text references. So, to convert "United States [19]" into "United States" you may have searched for " [*]"  
+
+This string patter means, explicitly,  
+
+1. SPACE
+2. LEFT BRACKET
+3. ANYTHING THAT FOLLOWS (the asterisk is called a wildcard that matches zero or more characters)
+4. RIGHT BRACKET
+
+
+Without knowing it (or maybe you did) you have used a regular expression. Regular Expressions are a formal way of explicitly describing a matching pattern for a string of characters. Regular expressions are extremely powerful, and you can, with patients and a lot of research, match any string of characters you can imagine. Some common usages for regular expressions include patterns for matching/finding telephone numbers, URLs, and email addresses in a string of text.
+
+However, going back to the search and replace issue, what happens when you don't have a handy package/function/macro/ribbon bar to call on? Let's work our way from Excel over to R as we explore this question.
+
+In Excel you can build formulas **defined by you the user**, that call on built-in functions to solve this problem. So let's say that CELL(A7) has the value "United States [19]".
+
+Below are 2 useful Excel functions that you could use 
+
+![Excel Find](https://cdn.educba.com/academy/wp-content/uploads/2018/10/Find-function-in-Excel.png)
+
+The Find function in Excel, if called like this =FIND("[",A7) would return the value 15, as the position where it found the "[". So we now know that the junk text begins in position 15 and the first 14 characters are the ones that we want. Note that the Find function in Excel can take 3 parameters, we only specified the two (2) required arguments, the last one was optional. 
+
+
+![Excel Left Function](https://cdn.educba.com/academy/wp-content/uploads/2023/08/MAIN-IMAGE.png)
+
+The Left function in Excel, returns a number of characters from the left side of a string. You just have to say how many characters you want. Which is 14 characters in our case. So =LEFT(A7,FIND("[",A7)-1)), **a formula defined by you**,  would take the value in A7 and return "United States". Note that the Left function in Excel can take 2 parameters, we specified both as both were required. 
+
+#### As done in R 
+
+Note: R-Studio has excellent search and replace macros , just like Excel. And there are several excellent R packages that manipulate strings. But I want to take this opportunity to introduce **user defined functions** in R. We are going to write a function that is very similar to the Excel formula we built and described above. 
+
+Let's break down the anatomy of a (very simple) function in R 
+f <- function(x) x
+lets try it out
+
+``` {r }
+# first build our very simple function
+f <- function(x) x
+
+```
+
+Now let's use it a few times. You should always build it before you use it. 
+
+``` {r, }
+# let's use our very simple function a few times
+f("Hello World")
+f("My Name is Fred")
+f(34+23)
+f(109)
+
+```
+
+The above function takes one argument and returns the value of the argument itself.
+
+Note. A function always returns the last statement.
+
+
+Anatomy of a typical function in R 
+f <- function(arg1, arg2, ...) {
+  Statement 1
+  Statement 2
+  Statement 3
+  ...
+  last statement
+}
+
+### Finally, the actual solution...
+
+The function below clips the end of a string starting from a known character's position.
+The argument "atchr" is the known character. 
+The function -
+* takes two (2) parameters "x" and "atchr"
+* x is the string, and is a required argument as it has no default value
+* because atchr has a default value of "[", it can be omitted
+* finally the default value of atchr may be overridden to work with another character 
+
+
+``` {r }
+strip.lastfew <-  function (x, atchr = "\\[") {
+  pos <-regexpr(atchr, x)
+  if (!is.na(pos) && pos != -1 ) {substr(x,1,pos-1)} 
+  else
+  {as.character(x)}
+}
+```
+
+* regexpr() is a regular expression function similar to the FIND function in Excel. It returns to position of the 1st parameter in the 2nd parameter 
+* if -1 is returned as the value for pos, then the sub-string was not found, and we keep the original string  
+* the substr function is similar to LEFT - ( and, if you know you Excel, MID would be another useful comparison) 
+* use ?substr() to see the help on its parameters 
+
+
+By the way, if you are going through this tutorial interactively, have you been keeping your eye on the Environment pane (over on the top right) in R? As you create more and more objects, they appear in the environment pane.
+
+Great, we have created our first function, and it has been added to the Global Environment under Function, but how do we use it?
+
+Working from Excel back to R again, many times you select an entire spreadsheet, or row(s), or column(s) or block(s) of cells and apply an Excel function to the selection. 
+
+In R it is typical to instead focus on a data structure (a list or a data-frame) as the selection, and R has the Apply() family of functions that does various things to the selection. For a complete interactive tutorial on the Apply family of functions visit https://www.datacamp.com/community/tutorials/r-tutorial-apply-family 
+
+
+(Teaching Note - R's open source developer community has, over the years, independently developed many solutions to the same problem, or improved on functionality that is present in base R. So you will find many other packages (stringr, dplyr, tidyr, tidyverse) that manipulate sets or subsets of data, and we will explore a few more in this course )
+
+Back to our **user defined function**. I am going to use it 3 times.  
+
+* to drop sub-strings that start with the superscript reference "["
+* to drop sub-strings that start with a non-breaking space
+* to drop sub-strings that start with a regular space
+
+And how do we apply our user defined function to the various elements in our data-frame?
+
+With lapply(), You want to apply a given function to every element of a list and obtain a list as a result.
+The sapply() function works like lapply(), but it tries to simplify the output to the most elementary data structure that is possible. 
+
+Use ?lapply() and ?sapply in the R console to see the syntax and help for these functions.
+
+#### Apply() functions can seem strange to beginners but you already understand the concept (albeit visually). You select something and then apply a function to the selection. Download and watch this short video to refresh your memoryof the Select-Apply concept.
+
+https://github.com/TerryScantlebury/tallest-buildings/raw/refs/heads/main/Select-Apply-Short.mp4
+
+
+
+Given that these functions work on lists, and a data-frame is a set of lists ( each column is a list, remember when we used the list operator to view the Rank column - buildings$Rank), you feed the sapply() function a data-frame column (list) and it performs an operation on each row. 
+
+We will also use the for() looping function to control which columns we feed the apply() function
+
+Putting it all together: 
+
+``` {r }
+# check all the columns one by one and strip out the reference values based on 
+# where the "[" is found
+for(ndx in 1:ncol(buildings)){
+  buildings[,ndx] <- sapply(buildings[,ndx], strip.lastfew)
+}
+```
+
+When we referenced the building data-frame above, note the following
+* by not giving a row number when we reference buildings, we pass/access the entire column vector
+* by looping from the first to last column number, we access the entire data-frame.
+* the first parameter in sapply() is automatically passed to "x", the first argument in strip.lastfew()
+* by not calling strip.lastfew() with any parameters, "atchr" uses the default value "["
+  
+
+
+
+``` {r }
+# now let's strip based on the non-breaking space, whose code is 160
+# remember I got that from the code function in excel
+# update: I m using an octal notation for the character
+# and this time we do override the default for atchr
+
+
+for(ndx in 5:6) {
+  buildings[,ndx] <- sapply(buildings[,ndx], strip.lastfew ,atchr = "\xc2\xa0")
+
+}
+```
+
+
+
+Did we get all the spaces? 
+
+``` {r }
+buildings[45:49,c("Height.Metres","Height.Feet")]
+```
+No. Row 47 looks to have a regular space. 
+
+``` {r }
+#don't forget row 47 that has a normal on a space
+for(ndx in 5:6) {
+  buildings[47,ndx] <- sapply(buildings[47,ndx], strip.lastfew ,atchr = " ")
+}
+```
+
+Now, did we get all the spaces? 
+
+``` {r }
+buildings[45:49,c("Height.Metres","Height.Feet")]
+```
+Looks so. 
+``` {r }
+str(buildings)
+```
+
+## Remove the commas, you don't want to keep numbers as formatted text - can't do any math on text.
+
+The gsub() function is a find and replace function. It is one of a group of functions that use regular expressions for pattern matching.
+?gsub at the console for help on this (group of) function(s)
+
+Here we are replacing commas with nothing. 
+
+``` {r }
+# we must remove those commas from the height column
+buildings$`Height.Feet` <- gsub(",","",buildings$`Height.Feet`)
+```
+
+Question to the class. Should we check Height.Metres for commas also?
+
+Finally, let's coerce some columns from character to number. As a general rule, any column on which you can do math should be stored as a number.
+``` {r }
+str(buildings)
+```
+
+``` {r }
+#finally, let's change some of these character vectors to numeric vectors.
+for(ndx in c(1,5:8)) buildings[,ndx] <- sapply(buildings[,ndx], as.numeric)
+
+```
+## Level checking and Data Validation
+You should level check and validate the data your process at every step! 
+
+It is not unusual, for **errors/missteps in the cleaning procedure itself**, 
+to introduce unexpected NAs, numbers that are grossly over or under scaled,
+or just plane wrong, empty/damaged/broken text strings, misaligned data ...
+
+For example the step above introduced NA to the data. Is this good? bad? indifferent?
+
+A summary shows that the NAs were inserted into the 'Built' column.
+Looks like we don't have complete data on when two of the building were built.
+
+
+```{r}
+summary(buildings)
+```
+Validation ensures the data meets five core characteristics: 
+•	Validity: Conforming to defined business rules or constraints (e.g., age field only contains numbers between 0–120).
+•	Accuracy: Ensuring data is close to true values through cross-referencing with trusted sources.
+•	Completeness: Verifying all required data points are present and no mandatory fields are null.
+•	Consistency: Ensuring data is consistent within the dataset and across other datasets (e.g., a student's grade level matches their teacher's records).
+•	Uniformity: Ensuring data is in the same unit of measure and standardized format. 
+
+``` {r }
+str(buildings)
+```
+Question to the class. What do you think of my changing the Rank to a number?
+
+Last, but never least, don't forget to always save your work. 
+
+``` {r }
+# Save the dataframe as a csv file in the current directory
+write.csv(buildings,"./CleanedBuildings.csv", row.names = FALSE)
+```
+
+# Referenses
+## data structures in R
+
+Here is an excellent online chapter (the whole book is good) on the types of data in R. This is a must read for everyone  
+
+https://livebook.manning.com/book/r-in-action/chapter-2/1
+
+## w3schools R tutorials 
+https://www.w3schools.com/r/default.asp
+
+Additional **interactive** online tutorials where you can learn/test new skills 
+for regular expressiosn
+https://regexone.com/lesson/introduction_abcs
+
